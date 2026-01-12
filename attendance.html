@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body text-center">
+        <h2 class="card-title">📅 오늘의 출석부</h2>
+        <p class="card-text">버튼을 눌러 출석을 완료하세요.</p>
+        <button id="check-btn" class="btn btn-success btn-lg w-100">🙋‍♂️ 저 왔어요! (출석하기)</button>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h3>오늘 출석한 친구들</h3>
+    <ul class="list-group" id="attendee-list">
+        <li class="list-group-item text-muted">로딩 중...</li>
+    </ul>
+</div>
+
+<script type="module">
+    import { auth, db } from "/static/firebase.js";
+    import { collection, addDoc, query, where, getDocs, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+    // 출석 목록 불러오기 함수
+    async function loadAttendance() {
+        const user = auth.currentUser;
+        let isAdmin = false;
+
+        // 현재 로그인한 사용자가 관리자(nnabe)인지 확인
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists() && userDoc.data().isAdmin) {
+                isAdmin = true;
+            }
+        }
+
+        const q = query(collection(db, "attendance"), where("date", "==", today));
+        const querySnapshot = await getDocs(q);
+        const list = document.getElementById('attendee-list');
+        list.innerHTML = "";
+
+        if (querySnapshot.empty) {
+            list.innerHTML = '<li class="list-group-item text-muted">아직 아무도 출석하지 않았어요.</li>';
+            return;
+        }
+
+        querySnapshot.forEach((docSnapshot) => {
+            const data = docSnapshot.data();
+            const li = document.createElement('li');
+            li.className = "list-group-item d-flex justify-content-between align-items-center";
+            
+            const infoSpan = document.createElement('span');
+            infoSpan.innerHTML = `${data.name} <span class="badge bg-primary rounded-pill">출석완료</span>`;
+            li.appendChild(infoSpan);
+
+            // 관리자일 경우에만 삭제 버튼 추가
+            if (isAdmin) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = "btn btn-danger btn-sm";
+                deleteBtn.innerText = "삭제";
+                deleteBtn.onclick = async () => {
+                    if (confirm(`${data.name} 학생의 출석을 취소하시겠습니까?`)) {
+                        await deleteDoc(docSnapshot.ref);
+                        alert("삭제되었습니다.");
+                        loadAttendance();
+                    }
+                };
+                li.appendChild(deleteBtn);
+            }
+            
+            list.appendChild(li);
+        });
+    }
+
+    // 출석 버튼 클릭 이벤트
+    document.getElementById('check-btn').addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if (!user) return alert("로그인이 필요합니다.");
+
+        // 이미 출석했는지 확인
+        const q = query(collection(db, "attendance"), 
+                        where("date", "==", today), 
+                        where("uid", "==", user.uid));
+        const existing = await getDocs(q);
+        
+        if (!existing.empty) {
+            return alert("이미 오늘 출석을 했습니다.");
+        }
+
+        // 사용자 이름 가져오기
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userName = userDoc.exists() ? userDoc.data().name : "알 수 없음";
+
+        // 출석 저장
+        await addDoc(collection(db, "attendance"), {
+            uid: user.uid,
+            name: userName,
+            date: today,
+            timestamp: new Date()
+        });
+        alert("출석체크 완료!");
+        loadAttendance();
+    });
+
+    // 로그인 상태가 확인되면 목록을 불러옵니다 (관리자 권한 확인을 위해)
+    onAuthStateChanged(auth, (user) => {
+        loadAttendance();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="display-4 fw-bold">🏫 5학년 우리반 홈페이지</h1>
+</div>
+
+<div class="row">
+    <!-- 왼쪽: 가정통신문 -->
+    <div class="col-md-7 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-warning text-dark fw-bold">
+                📢 오늘의 가정통신문
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">1. 내일은 즐거운 현장체험학습 날입니다. 🎈</li>
+                    <li class="list-group-item">2. 준비물: 도시락, 물, 돗자리, 모자</li>
+                    <li class="list-group-item">3. 8시 40분까지 교실로 늦지 않게 오세요.</li>
+                    <li class="list-group-item">4. 숙제: 수학익힘책 30~31쪽 풀어오기</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 오른쪽: 로그인 및 기능 -->
+    <div class="col-md-5 mb-4">
+        <!-- 로그인 전: 로그인 폼 -->
+        <div id="guest-area" class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">로그인</h3>
+                <form id="login-form">
+                    <div class="mb-3">
+                        <label class="form-label">아이디</label>
+                        <input type="text" id="login-id" class="form-control" placeholder="예: nnabe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">비밀번호</label>
+                        <input type="password" id="login-pw" class="form-control" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">로그인</button>
+                        <a href="/register" class="btn btn-outline-secondary">회원가입</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 로그인 후: 환영 메시지 및 출석체크 버튼 -->
+        <div id="member-area" class="card shadow-sm bg-light" style="display: none;">
+            <div class="card-body text-center p-5">
+                <h3 class="card-title mb-3">환영합니다! 👋</h3>
+                <p class="card-text mb-4">오늘도 즐거운 하루 보내세요.</p>
+                <a class="btn btn-success btn-lg w-100" href="/attendance">
+                    ✅ 출석체크 하러가기
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth } from "/static/firebase.js";
+    import { onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // 로그인 상태 모니터링
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('guest-area').style.display = 'none';
+            document.getElementById('member-area').style.display = 'block';
+        } else {
+            document.getElementById('guest-area').style.display = 'block';
+            document.getElementById('member-area').style.display = 'none';
+        }
+    });
+
+    // 로그인 폼 제출 처리
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const idInput = document.getElementById('login-id').value;
+            const pwInput = document.getElementById('login-pw').value;
+            
+            // 관리자 아이디(nnabe) 및 비밀번호(1234) 처리 로직
+            const email = idInput.includes('@') ? idInput : idInput + '@school.com';
+            const password = pwInput === '1234' ? '123456' : pwInput;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // 성공 시 onAuthStateChanged가 UI를 업데이트함
+            } catch (error) {
+                alert("로그인 실패: 아이디 또는 비밀번호를 확인하세요.");
+            }
+        });
+    }
+</script>
+{% endblock %}

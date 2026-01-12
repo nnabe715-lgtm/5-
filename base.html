@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5학년 우리반 홈페이지</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Jua', sans-serif; }
+        .container { max-width: 800px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">🏫 5학년 우리반</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto" id="nav-menu">
+                    <!-- 자바스크립트로 메뉴가 채워집니다 -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script type="module">
+        import { auth } from "/static/firebase.js";
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const navMenu = document.getElementById('nav-menu');
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                navMenu.innerHTML = `
+                    <li class="nav-item"><a class="nav-link" href="/attendance">✅ 출석체크</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="logout-btn">로그아웃</a></li>
+                `;
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    signOut(auth).then(() => window.location.href = "/");
+                });
+            } else {
+                navMenu.innerHTML = `
+                    <li class="nav-item"><a class="nav-link" href="/login">로그인</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/register">회원가입</a></li>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
